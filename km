@@ -1,0 +1,70 @@
+#!/bin/ksh
+Tmp="/tmp/km$$"
+#trap 'rm -f "$Tmp" >/dev/null 2>&1' 0
+#trap "exit 2" 1 2 3 13 15
+rm /tmp/km*       > /dev/null 2>&1
+
+KMHOME=/home/mestes/scm/km.ksh
+
+error() {
+     print ""
+     print "km error: "  $1
+     exit 1
+}
+usage() {
+     print ""
+     print "Usage: km <script-file>"
+     print "       km.txt is the default script-file"
+     print ""
+}
+
+if [[ -a ${KMHOME}/includer.awk  && -a ${KMHOME}/km.src ]]; then
+          awk -f ${KMHOME}/includer.awk ${KMHOME}/km.src > ${KMHOME}/km.awk
+else
+          print ""
+          print "km runtime error (missing km runtime file)"
+          exit 1
+fi
+
+while getopts "c" arg
+do
+        case $arg in
+            c)
+                actioncode="yes"
+                ;;
+            h|*)
+                usage
+                exit 1
+                ;;
+        esac
+done
+shift $(($OPTIND - 1))
+
+if [[ $# -eq 1 ]];then
+     if [[ -a $1 ]]
+     then
+          print $1
+          cat  $1 | nawk -f ${KMHOME}/kmpre.awk | nawk -v KMHOME=${KMHOME} -f ${KMHOME}/km.awk  > ${Tmp}
+          kmc=$? 
+     else
+          error "File not found:" $1
+          exit 1
+     fi
+else
+     if [[ -a ${KMHOME}/km.txt ]]; then
+          print  ${KMHOME}/km.txt
+          cat  ${KMHOME}/km.txt | nawk -f ${KMHOME}/kmpre.awk | nawk -v KMHOME=${KMHOME} -f ${KMHOME}/km.awk  > ${Tmp}
+          kmc=$? 
+     else
+          print ""
+          print "km.txt not found"
+          usage
+          exit 1
+     fi
+fi
+
+if [[ ${kmc} -eq 0 ]];then
+     cp $Tmp kmrun
+     chmod 770 $Tmp 
+     $Tmp
+fi
