@@ -1,0 +1,193 @@
+# (c) Michael Estes, All Rights Reserved
+function getVersionString() { return "1.84" }
+function getWhichKSH() { return "/usr/bin/ksh" }
+function DEBUG(sz) { if (DEBUG_OPTION == 1) StdErrorOut("[" sz "]") }
+function rem(sz) { return "# REM " sz }
+function printline(sz) { printf("%s",sz) }
+function szIndent() { return("   ") }
+function szIndent2X() { return(szIndent() szIndent()) }
+function szIndent3X() { return(szIndent() szIndent() szIndent()) }
+function printIndent(sz) { print(szIndent() sz) }
+function printIndent2X(sz) { print(szIndent2X() sz) } 
+function printIndent3X(sz) { print(szIndent3X() sz) } 
+function squote(s) { return "'" s "'" }
+function dquote(s) { return "\"" s "\"" }
+function ltrim(s) { sub(/^ */, "", s); return s }
+function rtrim(s) { sub(/ *$/, "", s); return s }
+function trim(s) { return rtrim(ltrim(s)); }
+function getMenuLevelNameString() { return "MENULEVELNAMESTRING-%03d" }
+function getMLNS() { return getMenuLevelNameString() }
+function getMenuLevelIndexString() { return "MENULEVEL-INDEX-%03d" }
+function getMLIS() { return getMenuLevelIndexString() }
+function getMenuIndexString() { return "MENU-INDEX-%03d" }
+function getMIS() { return getMenuIndexString() }
+function makeRunable(sz) { system("chmod 700 " sz) }
+function gitInterface(sz,                   fn) { 
+     fn="/home/mestes/scm/scripts/" sz 
+     system("cp " sz "  /home/mestes/scm/scripts") 
+     system("git --git-dir=/home/mestes/scm/scripts/.git add " fn "  > /dev/null" ) 
+     system("git --git-dir=/home/mestes/scm/scripts/.git commit -m 'Script-Update' " fn " > /dev/null") 
+}
+function addList(list,item,         sz) {
+     if ( list == "") 
+        sz = item 
+     else 
+        sz = list "," item
+     return (sz)
+} 
+function openScript(sz) {
+     print "#!" getWhichKSH() > sz
+     DEBUG("Open script: " sz)
+     close(sz)
+} 
+function getMenuLevel(i,               sz) {
+          sz=heapname(sprintf(getMLIS(),i))
+          if (length(sz)== 0) sz = "0"
+          return sz*1
+}
+function cdr(szIn,                    i,a,n,sz) {
+     n=split(szIn,a," ")
+     sz=""
+     for (i=2;i<=n;i++ )  {
+          sz = sz a[i] " "
+     }
+     return trim(sz)
+}
+function thecdr(s,                    i,a,n,sz) {
+     n=split($0,a," ")
+     sz=""
+     for (i=2;i<=n;i++ )  {
+          sz = sz a[i] " "
+     }
+     return trim(sz)
+}
+function cdr2(s,                    i,a,n,sz) {
+     n=split($0,a," ")
+     sz=""
+     for (i=2;i<=n;i++ ) sz = sz a[i] " "
+     return trim(sz)
+}
+function cdr3(s,                    i,a,n,sz) {
+     n=split($0,a," ")
+     sz=""
+     for (i=3;i<=n;i++ ) sz = sz a[i] " "
+     return trim(sz)
+}
+function setNameValue(name,value) {
+     if (NAMEVALUE["namevalue-" name]=="")
+          NAMEVALUE["namevalue-" name]=value
+     return(value)
+}
+function clearNameValue(name) {
+     NAMEVALUE["namevalue-" name]=""
+     return(value)
+}
+function getNameValue(name) {
+     return(NAMEVALUE["namevalue-" name])
+}
+function heapdumper(szText) {
+     print "--NEW" >> "heapdump"
+     for ( item in HEAP )  print item, HEAP[item] >> "heapdump"
+     close("heapdump")
+     return(0)
+}
+
+function heapman(sz,value,    n,i,item,szDex) {
+     sz = tolower(sz)
+     szDex = sz "-" "0"
+     n = HEAP[szDex] * 1
+     n = n + 1
+     HEAP[szDex] = n
+     szDex = sz "-" n
+     HEAP[szDex] = value
+     n=heapdumper("")
+}
+function heapname(sz,    szOut,n) {
+     szOut=""
+     sz = tolower("HEAPNAME-" sz)
+     n = HEAP[sz "-" "0"] * 1
+     if (n > 0) szOut = HEAP[sz "-" 1]
+     return szOut
+}
+function scriptname(sz) {
+     gsub(/[ ]/,"", sz)
+     sz = KMHOME "/tmp/" sz 
+     DEBUG(sz)
+     return(sz)
+}
+
+function bangline(c,w,           sz,i) {
+     for (i=0;i<w;i++) sz = sz c
+     return("#" sz)
+}
+function bannerline(w,c,sz,             i,n,szOut,szLine,szFill) {
+      szFill="" 
+      if (w<0)  {
+          w= w * -1
+          for (i=0;i<w;i++) szFill = szFill " "
+     }
+     if (length(sz) == 0) {
+          for (i=0;i<w;i++) szOut = szOut c
+     }
+     else {
+          for (i=0;i<w;i++) szLine = szLine c 
+          n=((w/2)-(length(sz)/2)) - 1
+          szOut="# " substr(szLine,1,n-2) " " sz " " substr(szLine,1,n) 
+     }
+     return(szFill szOut)
+}
+function heapmenuitem(n) {
+     return heapitem(sprintf(getMenuIndexString(),n)) 
+}
+function heapitem(sz,    szArg1,szArg2,szArg3,szArg4,szArg5,szOut,n,i,item,szDex,szComment,szLine,szTemp) {
+     sz = tolower(sz)
+     szOut=""
+     szDex = sz "-" "0"
+     n = HEAP[szDex] * 1
+     if (n > 0) {
+          for ( i=1;i<=n;i++) {
+               szDex = sz "-" i
+               szTemp = HEAP[szDex]
+               if (szTemp != "") sub(/{ARG1}/,szArg1, szTemp)
+               if (szTemp != "") sub(/{ARG2}/,szArg2, szTemp)
+               if (szTemp != "") sub(/{ARG3}/,szArg3, szTemp)
+               if (szTemp != "") sub(/{ARG4}/,szArg4, szTemp)
+               if (szTemp != "") sub(/{ARG5}/,szArg5, szTemp)
+               # szOut = szOut "\n" szTemp
+               szOut = szOut  szTemp "\n"
+          }
+          szOut = szOut
+#  "\n"
+     }
+     return szOut
+}
+function BlockCopy(sz,szTo,    szArg1,szArg2,szArg3,szArg4,szArg5,szOut,n,i,item,szDex,szComment,szLine,szTemp) {
+     sz = tolower(sz)
+     szOut=""
+     szDex = sz "-" "0"
+     n = HEAP[szDex] * 1
+     if (n > 0) {
+          heapman(sprintf(szTo,nMenuItemCounter), bannerline(BANNERWIDTH,"-",sz))
+          for ( i=1;i<=n;i++) {
+               szDex = sz "-" i
+               szTemp = HEAP[szDex]
+               if (szTemp != "") sub(/{ARG1}/,szArg1, szTemp)
+               if (szTemp != "") sub(/{ARG2}/,szArg2, szTemp)
+               if (szTemp != "") sub(/{ARG3}/,szArg3, szTemp)
+               if (szTemp != "") sub(/{ARG4}/,szArg4, szTemp)
+               if (szTemp != "") sub(/{ARG5}/,szArg5, szTemp)
+               heapman(sprintf(szTo,nMenuItemCounter), szTemp)
+          }
+          heapman(sprintf(szTo,nMenuItemCounter), bannerline(BANNERWIDTH,"-", "END " sz))
+     }
+     return szOut
+}
+function fatalError(f,l,sz) {
+     print "-- Fatal Error, KM Preprocessor"              > "/dev/stderr"
+     print "-- " sz ", " f ", " l                         > "/dev/stderr"
+     print ""                                             > "/dev/stderr"
+     exit 1
+}
+function StdErrorOut(sz) {
+     print sz > "/dev/stderr" 
+}
