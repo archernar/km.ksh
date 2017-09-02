@@ -1,5 +1,7 @@
 #!/bin/ksh
 Tmp="/tmp/km$$"
+KMPID=$$
+export KMPID
 #trap 'rm -f "$Tmp" >/dev/null 2>&1' 0
 #trap "exit 2" 1 2 3 13 15
 rm /tmp/km*       > /dev/null 2>&1
@@ -26,9 +28,14 @@ else
           exit 1
 fi
 
-while getopts "c" arg
+menuscriptname=""
+
+while getopts "cn:" arg
 do
         case $arg in
+            n)
+                menuscriptname="$OPTARG"
+                ;;
             c)
                 actioncode="yes"
                 ;;
@@ -44,7 +51,7 @@ if [[ $# -eq 1 ]];then
      if [[ -a $1 ]]
      then
           print $1
-          cat  $1 | nawk -f ${KMHOME}/kmpre.awk | nawk -v KMHOME=${KMHOME} -f ${KMHOME}/km.awk  > ${Tmp}
+          cat  $1 | nawk -f ${KMHOME}/kmpre.awk | nawk -v KMHOME=${KMHOME} -v KMPID=$$ -f ${KMHOME}/km.awk  > ${Tmp}
           kmc=$? 
      else
           error "File not found:" $1
@@ -53,7 +60,7 @@ if [[ $# -eq 1 ]];then
 else
      if [[ -a ${KMHOME}/km.txt ]]; then
           print  ${KMHOME}/km.txt
-          cat  ${KMHOME}/km.txt | nawk -f ${KMHOME}/kmpre.awk | nawk -v KMHOME=${KMHOME} -f ${KMHOME}/km.awk  > ${Tmp}
+          cat  ${KMHOME}/km.txt | nawk -f ${KMHOME}/kmpre.awk | nawk -v KMHOME=${KMHOME} -v KMPID=$$ -f ${KMHOME}/km.awk  > ${Tmp}
           kmc=$? 
      else
           print ""
@@ -66,5 +73,13 @@ fi
 if [[ ${kmc} -eq 0 ]];then
      cp $Tmp kmrun
      chmod 770 $Tmp 
+     if [[ $menuscriptname = "" ]] ; then
+          menuscriptname = ""
+     else
+          print "$menuscriptname"
+          cp $Tmp "$menuscriptname"
+          chmod 770 "$menuscriptname"
+     fi
+     print ${KMDESCFILE}
      $Tmp
 fi
